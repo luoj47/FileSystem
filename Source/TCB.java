@@ -56,6 +56,7 @@ public class TCB
         return pid;
     }
 
+
     public FileTableEntry getFtEnt(int param)
     {
         return null;
@@ -74,5 +75,15 @@ public class TCB
     public FileTableEntry returnFd(int param)
     {
         return null;
+    }
+
+    public boolean getTerminated()
+    {
+        return terminate;
+    }
+
+    public Thread getThread()
+    {
+        return thread;
     }
 }
