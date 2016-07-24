@@ -16,6 +16,7 @@ public class FileSystem
     private Superblock superblock;
     private Directory directory;
     private FileTable filetable;
+    private TCB tcb;
 
     /**
      * Constructs a new FileSystem.
@@ -51,9 +52,13 @@ public class FileSystem
      * @param files the # files to be created
      * @return 0 on success, -1 otherwise
      */
-    public int format(int files)
+    public boolean format(int files)
     {
-        return 0; // it needs to be modified later
+        // format/delete all files
+        // Check if FileTable ad TCB are empty (isEmpty)
+        // allocate "files" inodes
+        // returns if format successful
+        return false; // it needs to be modified later
     }
 
     // the description of open will be added more info later
@@ -69,6 +74,13 @@ public class FileSystem
      */
     public int open(String fileName, String mode)
     {
+        // FileTableEntry newfte = filetable.falloc(fileName, mode);
+        // for tcb.ftENT's length
+        // if a spot is null
+        // insert newfte
+        // return current index
+        //...
+        // return -1 if error
         return 0; // it needs to be modified later
     }
 
@@ -81,8 +93,10 @@ public class FileSystem
      * @param buffer the buffer
      * @return the # bytes read or -1 if there is an error
      */
-    public int read(int fd, byte[] buffer)
+    public int read(FileTableEntry fd, byte[] buffer)
     {
+        // read byte[] buffer from tcb.ftEnt[fd]
+        // return number of bytes read
         return 0; // it needs to be modified later
     }
 
@@ -94,8 +108,10 @@ public class FileSystem
      * @param buffer the buffer
      * @return
      */
-    public int write(int fd,  byte[] buffer)
+    public int write(FileTableEntry fd,  byte[] buffer)
     {
+        // write byte[] buffer to tcb.ftEnt[fd]
+        // return number of bytes written
         return 0; // it needs to be modified later
     }
 
@@ -109,8 +125,15 @@ public class FileSystem
      * SEEK_CUR == 1, and SEEK_END == 2
      * @return
      */
-    public int seek(int fd, int offset, int whence)
+    public int seek(FileTableEntry fd, int offset, int whence)
     {
+        // update seek pointer
+        //If whence = SEEK_SET (= 0),
+        // file's seek pointer set to offset bytes from beginning of file
+        //If whence = SEEK_CUR (= 1),
+        // file's seek pointer set to its current value plus offset. Offset can be positive/negative.
+        //If whence = SEEK_END (= 2),
+        // file's seek pointer set to size of file plus offset. Offset can be positive/negative.
         return 0; // it needs to be modified later
     }
 
@@ -121,9 +144,10 @@ public class FileSystem
      * @param fd file descriptor
      * @return 0 in success, -1 false
      */
-    public int close(int fd)
+    public boolean close(FileTableEntry fd)
     {
-        return 0; // it needs to be modified later
+        // tcb.ftEnt[fd] = null;
+        return false; // it needs to be modified later
     }
 
     /**
@@ -134,9 +158,11 @@ public class FileSystem
      * @param fileName the file name
      * @return 0 if successful, -1 otherwise
      */
-    public int delete(String fileName)
+    public boolean delete(String fileName)
     {
-        return 0; // it needs to be modified later
+        // if (file == open) { mark for deletion (also can't receive new open request}
+        // else { delete file}
+        return false; // it needs to be modified later
     }
 
     /**
@@ -147,8 +173,15 @@ public class FileSystem
      * @param fd the file descriptor
      * @return the file size
      */
-    public int fsize(int fd)
+    public int fsize(FileTableEntry fd)
     {
+        // return tcb.ftEnt[fd];
         return 0; // it needs to be modified later
+    }
+
+    // do later
+    public void sync()
+    {
+
     }
 }
