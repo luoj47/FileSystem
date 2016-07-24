@@ -56,9 +56,6 @@ public class TCB
         return pid;
     }
 
-<<<<<<< HEAD
-=======
-
     public FileTableEntry getFtEnt(int param)
     {
         return null;
@@ -78,5 +75,4 @@ public class TCB
     {
         return null;
     }
->>>>>>> 0a2976a7196620906f542ac274ec55db7fab087c
 }
