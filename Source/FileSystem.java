@@ -214,7 +214,7 @@ public class FileSystem
      */
     public int fsize(FileTableEntry fd)
     {
-        return fd.inode.length; 
+        return fd.inode.length;
     }
 
     // do later

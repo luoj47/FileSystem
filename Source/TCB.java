@@ -67,7 +67,7 @@ public class TCB
         return null;
     }
 
-    public int getFd(int param)
+    public int getFd(FileTableEntry param)
     {
         return 0;
     }
