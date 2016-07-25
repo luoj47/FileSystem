@@ -28,11 +28,13 @@ public class FileSystem
         // create new superblock, format disk with 64 inodes
         superblock = new Superblock (diskBlocks);
 
+        directory = new Directory(superblock.totalInodes);
+
         // create new directory, register "/" in directory entry 0
         filetable = new FileTable(directory);
 
         // reconstruct the directory
-        /*
+
         FileTableEntry dirEnt = open("/", "r");
         int dirSize = fsize(dirEnt);
         if(dirSize > 0)
@@ -41,7 +43,7 @@ public class FileSystem
             read(dirEnt, dirData);
             directory.bytes2directory(dirData);
         }
-        close(dirEnt);*/
+        close(dirEnt);
     }
 
     // the description of sync will be added more info later
@@ -50,7 +52,7 @@ public class FileSystem
      * This method formats the disk
      *
      * @param files the # files to be created
-     * @return 0 on success, -1 otherwise
+     * @return true on success, false otherwise
      */
     public boolean format(int files)
     {
@@ -58,7 +60,12 @@ public class FileSystem
         // Check if FileTable ad TCB are empty (isEmpty)
         // allocate "files" inodes
         // returns if format successful
-        return false; // it needs to be modified later
+
+        // format superblock here, superblock.format(files)?
+
+        directory = new Directory(superblock.totalInodes);
+        filetable = new FileTable(directory);
+        return true; // it needs to be modified later
     }
 
     // the description of open will be added more info later
@@ -72,7 +79,7 @@ public class FileSystem
      * @return int fd
      * between 3 to 31
      */
-    public int open(String fileName, String mode)
+    public FileTableEntry open(String fileName, String mode)
     {
         // FileTableEntry newfte = filetable.falloc(fileName, mode);
         // for tcb.ftENT's length
@@ -81,7 +88,7 @@ public class FileSystem
         // return current index
         //...
         // return -1 if error
-        return 0; // it needs to be modified later
+        return null; // it needs to be modified later
     }
 
     /**
@@ -89,7 +96,7 @@ public class FileSystem
      * or up to buffer.length the file
      * corresponding to the file descriptor
      *
-     * @param fd the file descriptor
+     * @param fd FileTableEntry
      * @param buffer the buffer
      * @return the # bytes read or -1 if there is an error
      */
@@ -104,9 +111,9 @@ public class FileSystem
      * This method writes the contents of the buffer to the
      * file corresponding to the file descriptor.
      *
-     * @param fd the file descriptor
+     * @param fd FileTableEntry
      * @param buffer the buffer
-     * @return
+     * @return number of bytes written, or negative for error
      */
     public int write(FileTableEntry fd,  byte[] buffer)
     {
@@ -118,31 +125,63 @@ public class FileSystem
     /**
      * This method updates the seek pointer corresponding to
      * the file descriptor.
+     * If whence = SEEK_SET (= 0),
+     * file's seek pointer set to offset bytes from beginning of file
+     * If whence = SEEK_CUR (= 1),
+     * file's seek pointer set to its current value plus offset. Offset can be positive/negative.
+     * If whence = SEEK_END (= 2),
+     * file's seek pointer set to size of file plus offset. Offset can be positive/negative.
      *
-     * @param fd the file descriptor
+     * If the user attempts to set the seek pointer to a negative number, seekPtr is set to zero.
+     * If the user attempts to set the pointer to beyond the file size, seekPtr set to the end of the file.
+     * In both cases, success is returned
+     *
+     * @param fd FileTableEntry
      * @param offset the offset can be positive or negative
      * @param whence the whence represents SEEK_SET == 0,
      * SEEK_CUR == 1, and SEEK_END == 2
-     * @return
+     * @return 0 in success, -1 false
      */
     public int seek(FileTableEntry fd, int offset, int whence)
     {
+        switch(whence)
+        {
+            case SEEK_SET:
+                fd.seekPtr = offset;
+                break;
+
+            case SEEK_CUR:
+                fd.seekPtr += offset;
+                break;
+
+            case SEEK_END:
+                fd.seekPtr = this.fsize(fd) + offset;
+                break;
+
+            default:
+                return -1;
+        }
+
+        if(fd.seekPtr < 0)
+        {
+            fd.seekPtr = 0;
+        }
+        if(fd.seekPtr > this.fsize(fd))
+        {
+            fd.seekPtr = this.fsize(fd);
+        }
+
         // update seek pointer
-        //If whence = SEEK_SET (= 0),
-        // file's seek pointer set to offset bytes from beginning of file
-        //If whence = SEEK_CUR (= 1),
-        // file's seek pointer set to its current value plus offset. Offset can be positive/negative.
-        //If whence = SEEK_END (= 2),
-        // file's seek pointer set to size of file plus offset. Offset can be positive/negative.
-        return 0; // it needs to be modified later
+
+        return fd.seekPtr; // it needs to be modified later
     }
 
     /**
      * This method close the file corresponding to
      * the file descriptor
      *
-     * @param fd file descriptor
-     * @return 0 in success, -1 false
+     * @param fd FileTableEntry
+     * @return true in success, false otherwise
      */
     public boolean close(FileTableEntry fd)
     {
@@ -156,7 +195,7 @@ public class FileSystem
      * file is closed
      *
      * @param fileName the file name
-     * @return 0 if successful, -1 otherwise
+     * @return true if successful, false otherwise
      */
     public boolean delete(String fileName)
     {
@@ -170,13 +209,12 @@ public class FileSystem
      * of the file indicated by file descriptor
      * and returns -1 when it detects an error
      *
-     * @param fd the file descriptor
+     * @param fd FileTableEntry
      * @return the file size
      */
     public int fsize(FileTableEntry fd)
     {
-        // return tcb.ftEnt[fd];
-        return 0; // it needs to be modified later
+        return fd.inode.length; 
     }
 
     // do later

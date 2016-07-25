@@ -37,6 +37,12 @@ public class FileTable
      */
     public synchronized FileTableEntry falloc(String filename, String mode)
     {
+        // int iNumber = dir.ialloc(filename);
+        // Inode newInode = new Inode(iNumber);
+        // FileTableEntry fte = new FileTableEntry(newInode, iNumber, mode)
+        // fte.inode.count++;
+        // fte.inode.toDisk(iNumber);
+        // return fte;
         return null; // It needs to be modified later
     }
 
@@ -51,6 +57,9 @@ public class FileTable
      */
     public synchronized boolean ffree(FileTableEntry e)
     {
+        // e.inode.toDisk(e.iNumber);
+        // dir.ifree(e.iNumber);
+        // return if TCB's ftEnt contains e
         return false; // It needs to be modified later
     }
 

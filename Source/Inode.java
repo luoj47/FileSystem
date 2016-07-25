@@ -8,7 +8,7 @@ public class Inode
 {
     private final static int iNodeSize = 32;        // fix to 32 bytes
     private final static int directSize = 11;       // # direct pointers
-    
+
     public int length;                              // file size in bytes
     public short count;                             // # file-table entries pointing on this
     public short flag;                              // 0 = unused, 1 = used, ...
@@ -38,7 +38,9 @@ public class Inode
      */
     Inode(short iNumber)
     {
-
+        // Directory dir = new Directory(iNodeSize);
+        // inode = (Inode)dir.directory2bytes;
+        // direct[iNumber] = inode
     }
 
     /**
@@ -49,6 +51,8 @@ public class Inode
      */
     int toDisk(short iNumber)
     {
+        // Directory dir = new Directory(iNodeSize);
+        // dir.bytes2directory((byte[])direct[iNumber]);
         return 0; // It needs to be modified later
     }
 }

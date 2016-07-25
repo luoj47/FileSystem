@@ -11,7 +11,7 @@ public class TCB
     private int tid = 0;
     private int pid = 0;
     private boolean terminate = false;
-    
+
     // User file descriptor table:
     // each entry pointing to a file (structure) table entry
     public FileTableEntry[] ftEnt = null;
@@ -31,7 +31,7 @@ public class TCB
         this.tid = tid;
         this.pid = pid;
         terminate = false;
-        
+
         // The following code is added for the file system
         ftEnt = new FileTableEntry[32];
     }

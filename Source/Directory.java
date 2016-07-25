@@ -8,7 +8,7 @@
 public class Directory
 {
     private static int maxChars = 30;   // max characters of each file name
-    
+
     // Directory entries
     private int fsize[];
     private char fnames[][];
@@ -36,7 +36,8 @@ public class Directory
      */
     public int bytes2directory(byte data[])
     {
-        
+        // convert byte data[] to fnames/fsize
+        // return if successful
         return 0; // It needs to be modified later
     }
 
@@ -48,6 +49,8 @@ public class Directory
      */
     public byte[] directory2bytes()
     {
+        // convert fnames/fisize to byte[]
+        // return converted data
         return null; // It needs to be modified later
     }
 
@@ -60,6 +63,9 @@ public class Directory
      */
     public short ialloc(String filename)
     {
+        // newINumber = new inode number for filename
+        // fnames[filename][newINumber], insert in fnames
+        // return newInumber
         return 0; // It needs to be modified later
     }
 
@@ -73,7 +79,14 @@ public class Directory
      */
     public boolean ifree(short iNumber)
     {
-        
+        // for the length of fnames
+        // if the current inode number matches iNumber
+        // for the length of ftEnt in TCB
+        // if the current inode has inumber that matches iNumer
+        // delete somehow
+        // remove inumber and file from fnames
+        // ...
+        // return if dellocation is successful
         return false; // It needs to be modified later
     }
 
@@ -81,10 +94,15 @@ public class Directory
      * This method returns the inumber corresoponding to this filename
      *
      * @param filename the file name
-     * @return the inode number corresponding to this file name
+     * @return the inode number corresponding to this file name, or -1 if not found
      */
     public short namei(String filename)
     {
+        // for the length of fnames
+        // if the current fname matches filename
+        // return the inode number at this index
+        // ...
+        // return -1, because not found
         return 0; // It needs to be modified later
     }
 }
