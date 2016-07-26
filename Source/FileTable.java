@@ -12,7 +12,7 @@ public class FileTable
 {
     private Vector table;
     private Directory dir;
-
+    
     /**
      * Class constructor that initializes the fields of table
      * and dir.
@@ -24,7 +24,7 @@ public class FileTable
         table = new Vector();
         dir = directory;
     }
-
+    
     /**
      * This method allocates a new file table entry for this file name
      * and it also allocate/retrive and register the corresoponding inode
@@ -37,15 +37,9 @@ public class FileTable
      */
     public synchronized FileTableEntry falloc(String filename, String mode)
     {
-        // int iNumber = dir.ialloc(filename);
-        // Inode newInode = new Inode(iNumber);
-        // FileTableEntry fte = new FileTableEntry(newInode, iNumber, mode)
-        // fte.inode.count++;
-        // fte.inode.toDisk(iNumber);
-        // return fte;
-        return null; // It needs to be modified later
+        return null; // needs to be coded
     }
-
+    
     /**
      * This method receive a file table entry reference
      * and save the corresponding inode to the disk
@@ -55,20 +49,19 @@ public class FileTable
      * @return True if this file entry found in the table,
      * false otherwise
      * edited on 7/23/16 by Midori
-     * Jesse: Minor typo fixes so it compiles
      */
     public synchronized boolean ffree(FileTableEntry e)
     {
         boolean value = table.remove(e);
-        if (value == true)
+        if (value ==  true)
         {
-            e.inode.flag = 0;
-            if (e.inode.count != 0)
+            e.inode.flag=0;
+            
+            if(e.inode.count != 0)
                 e.inode.count--;
-
             SysLib.cerr(" " + e.inode.count);
             e.inode.toDisk(e.iNumber); //save to disk
-
+            
             //write to direct
             e = null;
             return true;
@@ -79,7 +72,7 @@ public class FileTable
             return false;
         }
     }
-
+    
     /**
      * This method clear all file table entry in the table
      * and it should be called before starting a format

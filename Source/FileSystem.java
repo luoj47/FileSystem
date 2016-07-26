@@ -27,14 +27,13 @@ public class FileSystem
     {
         // create new superblock, format disk with 64 inodes
         superblock = new Superblock (diskBlocks);
-
+        
         directory = new Directory(superblock.totalInodes);
 
         // create new directory, register "/" in directory entry 0
         filetable = new FileTable(directory);
 
         // reconstruct the directory
-
         FileTableEntry dirEnt = open("/", "r");
         int dirSize = fsize(dirEnt);
         if(dirSize > 0)
@@ -52,7 +51,7 @@ public class FileSystem
      * This method formats the disk
      *
      * @param files the # files to be created
-     * @return true on success, false otherwise
+     * @return 0 on success, -1 otherwise
      */
     public boolean format(int files)
     {
@@ -60,9 +59,7 @@ public class FileSystem
         // Check if FileTable ad TCB are empty (isEmpty)
         // allocate "files" inodes
         // returns if format successful
-
-        // format superblock here, superblock.format(files)?
-
+        
         directory = new Directory(superblock.totalInodes);
         filetable = new FileTable(directory);
         return true; // it needs to be modified later
@@ -81,14 +78,13 @@ public class FileSystem
      */
     public FileTableEntry open(String fileName, String mode)
     {
-        // FileTableEntry newfte = filetable.falloc(fileName, mode);
-        // for tcb.ftENT's length
-        // if a spot is null
-        // insert newfte
-        // return current index
-        //...
-        // return -1 if error
-        return null; // it needs to be modified later
+        FileTableEntry newfte = filetable.falloc(fileName, mode);
+
+        if (mode == "w")
+            if (deallocAllBlocks(newfte))
+                return null;
+
+        return newfte; // when there is no spot in the table
     }
 
     /**
@@ -96,7 +92,7 @@ public class FileSystem
      * or up to buffer.length the file
      * corresponding to the file descriptor
      *
-     * @param fd FileTableEntry
+     * @param fd the file descriptor
      * @param buffer the buffer
      * @return the # bytes read or -1 if there is an error
      */
@@ -111,9 +107,9 @@ public class FileSystem
      * This method writes the contents of the buffer to the
      * file corresponding to the file descriptor.
      *
-     * @param fd FileTableEntry
+     * @param fd the file descriptor
      * @param buffer the buffer
-     * @return number of bytes written, or negative for error
+     * @return
      */
     public int write(FileTableEntry fd,  byte[] buffer)
     {
@@ -149,19 +145,19 @@ public class FileSystem
             case SEEK_SET:
                 fd.seekPtr = offset;
                 break;
-
+                
             case SEEK_CUR:
                 fd.seekPtr += offset;
                 break;
-
+                
             case SEEK_END:
                 fd.seekPtr = this.fsize(fd) + offset;
                 break;
-
+                
             default:
                 return -1;
         }
-
+        
         if(fd.seekPtr < 0)
         {
             fd.seekPtr = 0;
@@ -170,9 +166,9 @@ public class FileSystem
         {
             fd.seekPtr = this.fsize(fd);
         }
-
+        
         // update seek pointer
-
+        
         return fd.seekPtr; // it needs to be modified later
     }
 
@@ -180,13 +176,19 @@ public class FileSystem
      * This method close the file corresponding to
      * the file descriptor
      *
-     * @param fd FileTableEntry
-     * @return true in success, false otherwise
+     * @param fd file descriptor
+     * @return true in success, -1 false
      */
     public boolean close(FileTableEntry fd)
     {
-        // tcb.ftEnt[fd] = null;
-        return false; // it needs to be modified later
+        int index;
+        if ((index = tcb.getFd(fd)) != -1)
+        {
+            tcb.ftEnt[index] = null;
+            return true;
+        }
+
+        return false; // when there is no corresponding file table entry
     }
 
     /**
@@ -195,13 +197,20 @@ public class FileSystem
      * file is closed
      *
      * @param fileName the file name
-     * @return true if successful, false otherwise
+     * @return True if successful, false otherwise
      */
     public boolean delete(String fileName)
     {
-        // if (file == open) { mark for deletion (also can't receive new open request}
+        // if (file == open){ mark for deletion (also can't receive new open request}
         // else { delete file}
-        return false; // it needs to be modified later
+
+        short iNumber = directory.namei(fileName); // get the iNumber
+        if(directory.ifree(iNumber)) // free the iNode and file
+        {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -209,10 +218,10 @@ public class FileSystem
      * of the file indicated by file descriptor
      * and returns -1 when it detects an error
      *
-     * @param fd FileTableEntry
+     * @param fd the file descriptor
      * @return the file size
      */
-    public int fsize(FileTableEntry fd)
+    public synchronized int fsize(FileTableEntry fd)
     {
         return fd.inode.length;
     }
@@ -221,5 +230,11 @@ public class FileSystem
     public void sync()
     {
 
+    }
+    
+    // do later
+    private boolean deallocAllBlocks(FileTableEntry ftEnt)
+    {
+        return false;
     }
 }
