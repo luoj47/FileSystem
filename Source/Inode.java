@@ -56,11 +56,13 @@ public class Inode
         flag = SysLib.bytes2short ( data, offset );
         offset += 2;
 
-        // Jesse: for loop here?
-        /*direct[ index ] = SysLib.bytes2short( data, offset );
-        offset += 2;
+        for(int i = 0; i < directSize; i++)
+        {
+            direct[i] = SysLib.bytes2short( data, offset );
+            offset += 2;
+        }
+
         indirect = SysLib.bytes2short( data, offset );
-        offset += 2;*/
     }
 
     /**
@@ -96,11 +98,14 @@ public class Inode
 
         //Prepare the flag
         offset += 2;
-        for (int i = 0; i < directSize; i++) {                                                                     	  SysLib.short2bytes(direct[i], data, offset);
+        for (int i = 0; i < directSize; i++)
+        {
+            SysLib.short2bytes(direct[i], data, offset);
             offset += 2;
         }
 
-        SysLib.short2bytes(indirect, data, offset);                                           	        	    SysLib.rawwrite(blockNumber, data);
+        SysLib.short2bytes(indirect, data, offset);
+        SysLib.rawwrite(blockNumber, data);
         return iNodeSize;
     }
 }

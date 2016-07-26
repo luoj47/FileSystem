@@ -72,7 +72,9 @@ public class FileTable
             //write to direct
             e = null;
             return true;
-        } else {
+        }
+        else
+        {
             System.err.println("freeing nonexistent FTE");
             return false;
         }
