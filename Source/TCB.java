@@ -11,6 +11,7 @@ public class TCB
     private int tid = 0;
     private int pid = 0;
     private boolean terminate = false;
+    private final static int FILE_TABLE_ENTRY_SIZE = 32;
 
     // User file descriptor table:
     // each entry pointing to a file (structure) table entry
@@ -33,7 +34,7 @@ public class TCB
         terminate = false;
 
         // The following code is added for the file system
-        ftEnt = new FileTableEntry[32];
+        ftEnt = new FileTableEntry[FILE_TABLE_ENTRY_SIZE];
     }
 
     /**
@@ -56,33 +57,89 @@ public class TCB
         return pid;
     }
 
-
-    public FileTableEntry getFtEnt(int param)
+    /**
+     * This method returns a specified file table
+     * entry corresponding to the fd and fd shoul not
+     * be 0, 1, and 2 since their reseved by standard
+     * input, output, and error.
+     *
+     * @param fd the file discripter
+     * @return fnEnt[fd] if the file entry exists
+     * null if not
+     */
+    public FileTableEntry getFtEnt(int fd)
     {
+        // if 3 <= fd <= FILE_TABLE_ENTRY_SIZE
+        if (fd >= 3 && fd <= FILE_TABLE_ENTRY_SIZE)
+        {
+            return ftEnt[fd];
+        }
+
         return null;
     }
 
-    public FileTableEntry getFtEnt(FileTableEntry param)
+    /**
+     * This method returns the file
+     * descriptor
+     *
+     * @param ftEnt file table Entry
+     * @return file descriptor -1 if not found
+     */
+    public int getFd(FileTableEntry ftEnt)
     {
+        int index = 0;
+        while (ftEnt != this.ftEnt[index] && index <= FILE_TABLE_ENTRY_SIZE)
+        {
+            index++;
+        }
+
+        if (this.ftEnt[index] != null)
+        {
+            return index;
+        }
+
+        return -1;
+    }
+
+    /**
+     * This method returns a specified file table
+     * entry corresponding to the fd and fd shoul not
+     * be 0, 1, and 2 since their reseved by standard
+     * input, output, and error.
+     *
+     * @param fd the file discripter
+     * @return fnEnt[fd] if the file entry exists
+     * null if not
+     */
+    public FileTableEntry returnFd(int fd)
+    {
+        // if 3 <= fd <= FILE_TABLE_ENTRY_SIZE
+        if (fd >= 3 && fd <= FILE_TABLE_ENTRY_SIZE)
+        {
+            FileTableEntry oldFtEtn = ftEnt[fd];
+            ftEnt[fd] = null;
+            return oldFtEtn;
+        }
+
         return null;
     }
 
-    public int getFd(FileTableEntry param)
-    {
-        return 0;
-    }
-
-    public FileTableEntry returnFd(int param)
-    {
-        return null;
-    }
-
+    /**
+     * This method returns the terminate
+     *
+     * @return terminate the terminte
+     */
     public boolean getTerminated()
     {
         return terminate;
     }
 
-    public Thread getThread()
+    /**
+     * This method returns the thread
+     *
+     * @return thread the current thread
+     */
+    public synchronized Thread getThread()
     {
         return thread;
     }
