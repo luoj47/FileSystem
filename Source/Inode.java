@@ -35,12 +35,32 @@ public class Inode
      * This method retrieves the inode from disk
      *
      * @param iNumber
+     * * edited by Midori on 7/23/16
+     * fixed some typos so it compiles 7/25/16
+     * added function code from slides
      */
     Inode(short iNumber)
     {
-        // Directory dir = new Directory(iNodeSize);
-        // inode = (Inode)dir.directory2bytes;
-        // direct[iNumber] = inode
+        //retrieves existing inode from disk to memory
+        //reads disk block, and locates the iNumber information in that block
+        // Initialize a new inode with that info
+        int blockNumber = 1 + iNumber / 16;
+        byte[] data = new byte[Disk.blockSize];
+        SysLib.rawread( blockNumber, data );
+        int offset = ( iNumber % 16 ) * 32;
+
+        length = SysLib.bytes2int ( data, offset );
+        offset += 4;
+        count = SysLib.bytes2short ( data, offset );
+        offset += 2;
+        flag = SysLib.bytes2short ( data, offset );
+        offset += 2;
+
+        // Jesse: for loop here?
+        /*direct[ index ] = SysLib.bytes2short( data, offset );
+        offset += 2;
+        indirect = SysLib.bytes2short( data, offset );
+        offset += 2;*/
     }
 
     /**
@@ -48,11 +68,39 @@ public class Inode
      *
      * @param iNumber
      * @return
+     * edited by Midori on 7/23/16
+     * added function code from slides
      */
     int toDisk(short iNumber)
     {
-        // Directory dir = new Directory(iNodeSize);
-        // dir.bytes2directory((byte[])direct[iNumber]);
-        return 0; // It needs to be modified later
+        //Save to disk as the i-th inode
+        int blockNumber = 1 + iNumber / 16;
+
+        //set the block number, divisible by 16. Add 1 to keep out of superblock
+        byte[] data = new byte[Disk.blockSize];
+        SysLib.rawread(blockNumber, data);
+
+        //Read in the buffer
+        int offset = (iNumber % 16) * iNodeSize;
+
+        //Calculate the offset
+        SysLib.int2bytes(length, data, offset);
+
+        //Prepare the length
+        offset += 4;
+        SysLib.short2bytes(count, data, offset);
+
+        //Prepare the count
+        offset += 2;
+        SysLib.short2bytes(flag, data, offset);
+
+        //Prepare the flag
+        offset += 2;
+        for (int i = 0; i < directSize; i++) {                                                                     	  SysLib.short2bytes(direct[i], data, offset);
+            offset += 2;
+        }
+
+        SysLib.short2bytes(indirect, data, offset);                                           	        	    SysLib.rawwrite(blockNumber, data);
+        return iNodeSize;
     }
 }

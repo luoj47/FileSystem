@@ -54,13 +54,28 @@ public class FileTable
      * @param e the file table entry
      * @return True if this file entry found in the table,
      * false otherwise
+     * edited on 7/23/16 by Midori
+     * Jesse: Minor typo fixes so it compiles
      */
     public synchronized boolean ffree(FileTableEntry e)
     {
-        // e.inode.toDisk(e.iNumber);
-        // dir.ifree(e.iNumber);
-        // return if TCB's ftEnt contains e
-        return false; // It needs to be modified later
+        boolean value = table.remove(e);
+        if (value == true)
+        {
+            e.inode.flag = 0;
+            if (e.inode.count != 0)
+                e.inode.count--;
+
+            SysLib.cerr(" " + e.inode.count);
+            e.inode.toDisk(e.iNumber); //save to disk
+
+            //write to direct
+            e = null;
+            return true;
+        } else {
+            System.err.println("freeing nonexistent FTE");
+            return false;
+        }
     }
 
     /**
