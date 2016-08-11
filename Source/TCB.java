@@ -12,11 +12,11 @@ public class TCB
     private int pid = 0;
     private boolean terminate = false;
     private final static int FILE_TABLE_ENTRY_SIZE = 32;
-    
+
     // User file descriptor table:
     // each entry pointing to a file (structure) table entry
     public FileTableEntry[] ftEnt = null;
-    
+
     /**
      *
      * Class constructor that initializes the parameters: thread, tid, pid
@@ -32,11 +32,11 @@ public class TCB
         this.tid = tid;
         this.pid = pid;
         terminate = false;
-        
+
         // The following code is added for the file system
         ftEnt = new FileTableEntry[FILE_TABLE_ENTRY_SIZE];
     }
-    
+
     /**
      * This method returns a thread id
      *
@@ -46,7 +46,7 @@ public class TCB
     {
         return tid;
     }
-    
+
     /**
      * This method returns a process id
      *
@@ -56,7 +56,7 @@ public class TCB
     {
         return pid;
     }
-    
+
     /**
      * This method returns a specified file table
      * entry corresponding to the fd and fd shoul not
@@ -70,14 +70,14 @@ public class TCB
     public synchronized FileTableEntry getFtEnt(int fd)
     {
         // if 3 <= fd <= FILE_TABLE_ENTRY_SIZE
-        if (fd >= 3 && fd <= FILE_TABLE_ENTRY_SIZE)
+        if (fd >= 3 && fd < FILE_TABLE_ENTRY_SIZE)
         {
             return ftEnt[fd];
         }
-        
+
         return null;
     }
-    
+
     /**
      * This method returns the file
      * descriptor
@@ -93,20 +93,23 @@ public class TCB
         // is not null
         if (ftEnt != null)
         {
-            while (this.ftEnt[index++] != null && index < FILE_TABLE_ENTRY_SIZE - 1) {}
+            while (this.ftEnt[index++] != null && index < FILE_TABLE_ENTRY_SIZE) {}
+        }
+        else
+        {
+            return -1;
         }
 
-        index--; // it decrements it by 1
-
+        index--;
         if (this.ftEnt[index] == null)
         {
             this.ftEnt[index] = ftEnt;
             return index;
         }
 
-        return -1; // error
+        return -1;
     }
-    
+
     /**
      * This method returns a specified file table
      * entry corresponding to the fd and fd shoul not
@@ -120,16 +123,16 @@ public class TCB
     public synchronized FileTableEntry returnFd(int fd)
     {
         // if 3 <= fd <= FILE_TABLE_ENTRY_SIZE
-        if (fd >= 3 && fd <= FILE_TABLE_ENTRY_SIZE)
+        if (fd >= 3 && fd < FILE_TABLE_ENTRY_SIZE)
         {
             FileTableEntry oldFtEtn = ftEnt[fd];
             ftEnt[fd] = null;
             return oldFtEtn;
         }
-        
+
         return null;
     }
-    
+
     /**
      * This method returns the terminate
      *
@@ -139,7 +142,13 @@ public class TCB
     {
         return terminate;
     }
-    
+
+    public synchronized boolean setTerminated()
+    {
+        return terminate = true;
+    }
+
+
     /**
      * This method returns the thread
      *

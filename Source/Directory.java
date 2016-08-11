@@ -59,7 +59,8 @@ public class Directory
      */
     public byte[] directory2bytes()
     {
-        byte data[] = new byte[(fsize.length * 4) + (fnames.length * maxChars * 2)];  // I'm not sure if this is the right size
+        byte data[] = new byte[(fsize.length * maxChars * 2)];  // I'm not sure if this is the right size
+
         int offset = 0;
 
         for ( int i = 0; i < fsize.length; i++, offset += 4 )
@@ -89,14 +90,22 @@ public class Directory
         {
             if(fsize[i] == 0)
             {
-                fsize[i] = filename.length();
-                fnames[i] = filename.toCharArray();
+                if (filename.length() > maxChars)
+                {
+                    fsize[i] = maxChars;
+                }
+                else
+                {
+                    fsize[i] = filename.length();
+                }
+
+                // Modify it later
+                filename.getChars(0, fsize[i], fnames[i], 0);
                 return (short) i;
             }
         }
 
-        // to do: create a new inode with it!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        return 0; // It needs to be modified later
+        return -1;
     }
 
     /**
@@ -109,12 +118,13 @@ public class Directory
      */
     public boolean ifree(short iNumber)
     {
-        if(fsize[iNumber] < 0){
+        if(fsize[iNumber] < 0 || iNumber > maxChars)
+        {
             return false;
         }
 
         fsize[iNumber] = 0;
-        return true; // It needs to be modified later
+        return true;
     }
 
     /**
@@ -127,9 +137,11 @@ public class Directory
     {
         String fname;
 
-        for(int i = 0; i < fsize.length; i++){
+        for(int i = 0; i < fsize.length; i++)
+        {
             fname = new String(fnames[i], 0, fsize[i]);
-            if(filename.compareTo(fname) == 0){
+            if(filename.compareTo(fname) == 0)
+            {
                 return (short) i;
             }
         }

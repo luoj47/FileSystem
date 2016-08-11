@@ -36,14 +36,14 @@ public class FileSystem
         // reconstruct the directory
         FileTableEntry dirEnt = open("/", "r");
         int dirSize = fsize(dirEnt);
-//        if(dirSize > 0)
-//        {
-//            byte[] dirData = new byte[dirSize];
-//            read(dirEnt, dirData);
-//            directory.bytes2directory(dirData);
-//        }
-//
-//        close(dirEnt);
+        if(dirSize > 0)
+        {
+            byte[] dirData = new byte[dirSize];
+            read(dirEnt, dirData);
+            directory.bytes2directory(dirData);
+        }
+        
+        close(dirEnt);
     }
     
     // the description of sync will be added more info later
@@ -61,8 +61,6 @@ public class FileSystem
         // allocate "files" inodes
         // returns if format successful
         
-        // directory = new Directory(superblock.totalInodes);
-
         superblock.format(files);
         directory = new Directory(superblock.totalInodes);
         filetable = new FileTable(directory);
@@ -86,17 +84,17 @@ public class FileSystem
         SysLib.cerr("\nOpen method is called\n");
         SysLib.cerr("My file name is :" + fileName + "\n");
         SysLib.cerr("My mode is : " + mode + "\n");
-
+        
         FileTableEntry newfte = filetable.falloc(fileName, mode);
-
+        
         if (mode == "w")
         {
-            if (deallocAllBlocks(newfte))
+            if (!deallocAllBlocks(newfte))
             {
                 return null;
             }
         }
-
+        
         SysLib.cerr("\n" + "open is done \n");
         return newfte; // when there is no spot in the table
     }
@@ -110,79 +108,141 @@ public class FileSystem
      * @param buffer the buffer
      * @return the # bytes read or -1 if there is an error
      */
-    public int read(FileTableEntry fd, byte[] buffer)
+    public synchronized int read(FileTableEntry fd, byte[] buffer)
     {
-        return 0;
+        if (fd != null || fd.mode == "r" || buffer.length > 0)
+        {
+            synchronized (fd)
+            {
+                int reading = 0; // amount of data you have to read
+                int havingRead = 0; // amound of the data you have read
+                int sizeLeft = buffer.length; // size that you are reading
+                boolean done = false;
+
+                SysLib.cout( " read is called \n" );
+                while(sizeLeft > 0 && fsize(fd) > fd.seekPtr)
+                {
+                    SysLib.cout( "sizeLeft: " + sizeLeft + "\n");
+                    int targetBlockID = fd.seekPtr;
+                    short targetBlock = fd.inode.findTargetBlock(targetBlockID);
+
+                    SysLib.cout( "targetBlockID: " + targetBlockID + "\n");
+                    SysLib.cout( "targetBlock: " + targetBlock + "\n");
+
+                    if (targetBlock == (short) -1)
+                    {
+                        return 0;
+                    }
+
+                    byte[] data = new byte[Disk.blockSize];
+                    SysLib.rawread(targetBlock, data);
+
+                    int diskLeft = Disk.blockSize - reading;
+                    int fileLeft = fd.inode.length - fd.seekPtr;
+                    int offset = fd.seekPtr % Disk.blockSize;
+
+                    SysLib.cout( "offset: " + offset + "\n");
+                    SysLib.cout( "diskLeft: " + diskLeft + "\n");
+                    SysLib.cout( "fileLeft: " + fileLeft + "\n");
+
+                    reading = (diskLeft < fileLeft) ? diskLeft : fileLeft;
+
+                    if (reading > sizeLeft)
+                    {
+                        reading = sizeLeft;
+                    }
+
+                    SysLib.cout( "reading: " + reading + "\n");
+
+                    System.arraycopy(data, offset, buffer, havingRead, reading);
+
+                    havingRead += reading;
+                    sizeLeft -=  reading;
+                    fd.seekPtr += reading;
+                }
+
+                return havingRead;
+            }
+        }
+
+        // read byte[] buffer from tcb.ftEnt[fd]
+        // return number of bytes read
+
+        return -1; // it needs to be modified later
     }
     
     /**
-     * Write contents of buffer to the
+     * This method writes the contents of the buffer to the
      * file corresponding to the file descriptor.
      *
      * @param fd the file descriptor
      * @param buffer the buffer
      * @return
      */
-    public synchronized int write(FileTableEntry fd,  byte[] buffer)
+    public synchronized int write(FileTableEntry fd, byte[] buffer)
     {
-        int targetBlockID = fd.seekPtr;
+        byte[] data = new byte[Disk.blockSize];
         int bytes = 0;
         int bufferLength = buffer.length;
 
-        if((fd.mode != "r") && (fd != null))
+        if (fd != null && fd.mode != "r")
         {
             while (bufferLength > 0)
             {
-                short targetBlock = fd.inode.findTargetBlock(targetBlockID);
+                int targetBlock = fd.inode.findTargetBlock(fd.seekPtr);
+
                 if (targetBlock == -1)
                 {
-                    targetBlock = (short) superblock.getFreeBlock();
-                    if((fd.inode.getBlockNumber(targetBlockID, targetBlock)) == -1)
+                    targetBlock = superblock.getFreeBlock();
+
+                    if ((fd.inode.getBlockNumber(fd.seekPtr, (short) targetBlock)) == -1)
                     {
                         return -1;
                     }
-                    else if ((fd.inode.getBlockNumber(targetBlockID, targetBlock)) == -2)
+                    else if ((fd.inode.getBlockNumber(fd.seekPtr, (short) targetBlock)) == -2)
                     {
-                        short freeBlock = (short) this.superblock.getFreeBlock();
-                        if ((!fd.inode.setBlockNumber(freeBlock))
-                                || (fd.inode.getBlockNumber(targetBlockID, targetBlock) != 0))
+                        if (!fd.inode.setBlockNumber((short) superblock.getFreeBlock()))
+                        {
+                            return -1;
+                        }
+                        if (fd.inode.getBlockNumber(fd.seekPtr, (short) targetBlock) != 0)
                         {
                             return -1;
                         }
                     }
                 }
-                byte[] data = new byte[Disk.blockSize];
+
                 SysLib.rawread(targetBlock, data);
-                int temp = (512 - (targetBlockID % Disk.blockSize));
-                if (bufferLength < temp)
+                int front = fd.seekPtr % Disk.blockSize;
+                int end = Disk.blockSize - front;
+
+                System.arraycopy(buffer, bytes, data, front, Math.min(bufferLength, end));
+                SysLib.rawwrite(targetBlock, data);
+                fd.seekPtr += Math.min(bufferLength, end);
+                bytes += Math.min(bufferLength, end);
+
+                if (bufferLength < end)
                 {
-                    System.arraycopy(buffer, bytes, data, (targetBlockID % Disk.blockSize), bufferLength);
-                    SysLib.rawwrite(targetBlock, data);
-                    fd.seekPtr += bufferLength;
-                    bytes += bufferLength;
                     bufferLength = 0;
                 }
                 else
                 {
-                    System.arraycopy(buffer, bytes, data, (targetBlockID % 512), temp);
-                    SysLib.rawwrite(targetBlock, data);
-
-                    fd.seekPtr += temp;
-                    bytes += temp;
-                    bufferLength -= temp;
+                    bufferLength -= end;
                 }
             }
-            if (fd.seekPtr > fd.inode.length)
-            {
-                fd.inode.length = fd.seekPtr;
-            }
-            fd.inode.toDisk(fd.iNumber);
-            return bytes;
         }
         else
         {
             return -1;
         }
+
+        if (fd.inode.length < fd.seekPtr)
+        {
+            fd.inode.length = fd.seekPtr;
+        }
+
+        fd.inode.toDisk(fd.iNumber);
+        return bytes;
     }
     
     /**
@@ -205,7 +265,7 @@ public class FileSystem
      * SEEK_CUR == 1, and SEEK_END == 2
      * @return 0 in success, -1 false
      */
-    public int seek(FileTableEntry fd, int offset, int whence)
+    public synchronized int seek(FileTableEntry fd, int offset, int whence)
     {
         switch(whence)
         {
@@ -252,7 +312,7 @@ public class FileSystem
         {
             return true;
         }
-        
+
         return false; // when there is no corresponding file table entry
     }
     
@@ -268,13 +328,13 @@ public class FileSystem
     {
         // if (file == open){ mark for deletion (also can't receive new open request}
         // else { delete file}
-        
+
         short iNumber = directory.namei(fileName); // get the iNumber
         if(directory.ifree(iNumber)) // free the iNode and file
         {
             return true;
         }
-        
+
         return false;
     }
     
@@ -288,9 +348,7 @@ public class FileSystem
      */
     public synchronized int fsize(FileTableEntry fd)
     {
-        // Debugging
-        SysLib.cerr("\nfsize method is called\n");
-
+        
         return fd.inode.length;
     }
     
@@ -307,6 +365,29 @@ public class FileSystem
     // do later
     private boolean deallocAllBlocks(FileTableEntry ftEnt)
     {
-        return false;
+        if(ftEnt.inode.count != 1){
+            SysLib.cerr("Null pointer, file table entry is empty");
+            return false;
+        }
+
+        for(int bID = 0; bID < ftEnt.inode.getDirectSize(); bID++){
+            if(ftEnt.inode.direct[bID] != -1){
+                superblock.returnBlock(bID);
+                ftEnt.inode.direct[bID] = -1;
+            }
+        }
+
+        byte[] data = new byte[Disk.blockSize];
+        SysLib.rawread(ftEnt.inode.indirect, data);
+        ftEnt.inode.indirect = -1;
+
+        if(data != null){
+            int bID;
+            while((bID = SysLib.bytes2short(data, 0)) != -1){
+                superblock.returnBlock(bID);
+            }
+        }
+        ftEnt.inode.toDisk(ftEnt.iNumber);
+        return true;
     }
 }

@@ -10,7 +10,7 @@ import java.util.Vector;
 
 public class FileTable
 {
-    private Vector table;
+    private Vector<FileTableEntry> table;
     private Directory dir;
 
     /**
@@ -21,7 +21,7 @@ public class FileTable
      */
     public FileTable(Directory directory)
     {
-        table = new Vector();
+        table = new Vector<FileTableEntry>();
         dir = directory;
     }
 
@@ -37,13 +37,13 @@ public class FileTable
      */
     // iNode.flag: 0 = unused, 1 = used, 2 = read, 3 = write, 4 = delete
     /*
-        falloc method by Lu Ming Hsuan 8/1/2016
-        Jesse: made a few modifications since it didn't work
-        This method allocates a new file table entry for the filename provided
-        by assigning or retrieving and logging the correct iNode using dir
-        and increments iNode's count
-        The updated iNode will be written back to disk after
-        and a reference to the file table entry is returned
+     falloc method by Lu Ming Hsuan 8/1/2016
+     Jesse: made a few modifications since it didn't work
+     This method allocates a new file table entry for the filename provided
+     by assigning or retrieving and logging the correct iNode using dir
+     and increments iNode's count
+     The updated iNode will be written back to disk after
+     and a reference to the file table entry is returned
      */
     public synchronized FileTableEntry falloc(String filename, String mode)
     {
@@ -61,17 +61,19 @@ public class FileTable
         {
             while (true)
             {
-                iNumber = filename.equals("/") ? (short) 0 : dir.namei(filename);
-                if (!mode.equals("r")) // create new
+                if (filename.equals("/"))
                 {
-                    iNumber = dir.ialloc(filename);
-                    iNode = new Inode(iNumber);
-                    iNode.flag = 3;
-                    break;
+                    iNumber = (short) 0;
                 }
-                else if (iNumber >= 0)
+                else
+                {
+                    iNumber = dir.namei(filename);
+                }
+
+                if (iNumber >= 0)
                 {
                     iNode = new Inode(iNumber);
+
                     if ((mode.equals("r")) && (iNode.flag == 0 // unused, used or read
                             || iNode.flag == 1
                             || iNode.flag == 2))
@@ -93,7 +95,7 @@ public class FileTable
                             || iNode.flag == 1
                             || iNode.flag == 3)
                     {
-                       break;
+                        break;
                     }
                     else
                     {
@@ -101,10 +103,19 @@ public class FileTable
                         {
                             wait();
                         }
-                        catch(InterruptedException e)
-                        {
-                        }
+                        catch(InterruptedException e){}
                     }
+                }
+                else if (!mode.equals("r")) // create new
+                {
+                    iNumber = dir.ialloc(filename);
+                    iNode = new Inode(iNumber);
+                    iNode.flag = 3;
+                    break;
+                }
+                else
+                {
+                    return null;
                 }
             }
         }
@@ -128,26 +139,34 @@ public class FileTable
      */
     public synchronized boolean ffree(FileTableEntry e)
     {
-
-        boolean value = table.remove(e);
-        if (value ==  true)
+        Inode temp = new Inode(e.iNumber);
+        //try and remove FTE if it is in table, the remove will return true
+        // return true if this file table entry found in my table
+        boolean removed = table.remove(e);
+        if (removed)
         {
-            e.inode.flag=0;
+            if (temp.flag == 3)
+            {
+                temp.flag = 1;
+                notifyAll();
+            }
+            else if ((temp.flag == 2) && (temp.count == 1))
+            {
+                // free this file table entry.
+                notify();
+                temp.flag = 1;
+            }
 
-            if(e.inode.count != 0)
-                e.inode.count--;
-            SysLib.cerr(" " + e.inode.count);
-            e.inode.toDisk(e.iNumber); //save to disk
-
-            //write to direct
-            e = null;
+            //decrease the count of users of that file
+            if(temp.count != 0)
+                temp.count--;
+            // save the corresponding inode to the disk
+            temp.toDisk(e.iNumber);
             return true;
         }
-        else
-        {
-            System.err.println("freeing nonexistent FTE");
-            return false;
-        }
+
+        return false;
+
     }
 
     /**
