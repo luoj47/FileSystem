@@ -38,6 +38,30 @@ public class TCB
     }
 
     /**
+     * This method returns the terminate
+     *
+     * @return terminate the terminte
+     */
+    public synchronized boolean getTerminated()
+    {
+        return terminate;
+    }
+
+    public synchronized boolean setTerminated()
+    {
+        return terminate = true;
+    }
+
+    /**
+     * This method returns the thread
+     *
+     * @return thread the current thread
+     */
+    public synchronized Thread getThread()
+    {
+        return thread;
+    }
+    /**
      * This method returns a thread id
      *
      * @return tid the id for a thread
@@ -69,7 +93,6 @@ public class TCB
      */
     public synchronized FileTableEntry getFtEnt(int fd)
     {
-        // if 3 <= fd <= FILE_TABLE_ENTRY_SIZE
         if (fd >= 3 && fd < FILE_TABLE_ENTRY_SIZE)
         {
             return ftEnt[fd];
@@ -122,7 +145,6 @@ public class TCB
      */
     public synchronized FileTableEntry returnFd(int fd)
     {
-        // if 3 <= fd <= FILE_TABLE_ENTRY_SIZE
         if (fd >= 3 && fd < FILE_TABLE_ENTRY_SIZE)
         {
             FileTableEntry oldFtEtn = ftEnt[fd];
@@ -131,31 +153,5 @@ public class TCB
         }
 
         return null;
-    }
-
-    /**
-     * This method returns the terminate
-     *
-     * @return terminate the terminte
-     */
-    public synchronized boolean getTerminated()
-    {
-        return terminate;
-    }
-
-    public synchronized boolean setTerminated()
-    {
-        return terminate = true;
-    }
-
-
-    /**
-     * This method returns the thread
-     *
-     * @return thread the current thread
-     */
-    public synchronized Thread getThread()
-    {
-        return thread;
     }
 }

@@ -106,7 +106,7 @@ public class FileTable
                         catch(InterruptedException e){}
                     }
                 }
-                else if (!mode.equals("r")) // create new
+                else if (!mode.equals("r"))
                 {
                     iNumber = dir.ialloc(filename);
                     iNode = new Inode(iNumber);
@@ -120,11 +120,11 @@ public class FileTable
             }
         }
 
-        iNode.count++;//increment iNode count
-        iNode.toDisk(iNumber);//write iNode back to disk
-        fte = new FileTableEntry(iNode,iNumber, mode);//create new FileTableEntry for filename
-        table.add(fte);//add FTE to table
-        return fte;//return FTE reference
+        iNode.count++;
+        iNode.toDisk(iNumber);
+        fte = new FileTableEntry(iNode,iNumber, mode);
+        table.add(fte);
+        return fte;
     }
 
     /**
@@ -140,8 +140,6 @@ public class FileTable
     public synchronized boolean ffree(FileTableEntry e)
     {
         Inode temp = new Inode(e.iNumber);
-        //try and remove FTE if it is in table, the remove will return true
-        // return true if this file table entry found in my table
         boolean removed = table.remove(e);
         if (removed)
         {
@@ -152,21 +150,18 @@ public class FileTable
             }
             else if ((temp.flag == 2) && (temp.count == 1))
             {
-                // free this file table entry.
                 notify();
                 temp.flag = 1;
             }
 
-            //decrease the count of users of that file
             if(temp.count != 0)
                 temp.count--;
-            // save the corresponding inode to the disk
+
             temp.toDisk(e.iNumber);
             return true;
         }
 
         return false;
-
     }
 
     /**

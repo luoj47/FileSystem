@@ -35,7 +35,6 @@ public class Superblock
         else
         {
             totalBlocks = diskSize;
-            SysLib.cerr("Formatting\n");
             format(defaultInodeBlocks);
         }
     }

@@ -119,7 +119,13 @@ public class Inode
         return 0;
     }
 
-    // find target block
+
+// find target block
+    /**
+     *
+     * @param offset
+     * @return
+     */
     public short findTargetBlock(int offset)
     {
         if ((offset / Disk.blockSize) < directSize)

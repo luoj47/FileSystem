@@ -43,8 +43,15 @@ public class FileSystem
         
         close(dirEnt);
     }
-    
-    // the description of sync will be added more info later
+
+    public void sync()
+    {
+        FileTableEntry fte = this.open("/", "w");
+        byte[] dirData = directory.directory2bytes();
+        write(fte, dirData);
+        close(fte);
+        superblock.sync();
+    }
     
     /**
      * This method formats the disk
@@ -78,13 +85,7 @@ public class FileSystem
      */
     public FileTableEntry open(String fileName, String mode)
     {
-        // Debugging
-        SysLib.cerr("\nOpen method is called\n");
-        SysLib.cerr("My file name is :" + fileName + "\n");
-        SysLib.cerr("My mode is : " + mode + "\n");
-        
         FileTableEntry newfte = filetable.falloc(fileName, mode);
-        
         if (mode == "w")
         {
             if (!deallocAllBlocks(newfte))
@@ -92,8 +93,7 @@ public class FileSystem
                 return null;
             }
         }
-        
-        SysLib.cerr("\n" + "open is done \n");
+
         return newfte; // when there is no spot in the table
     }
     
@@ -117,15 +117,10 @@ public class FileSystem
                 int sizeLeft = buffer.length; // size that you are reading
                 boolean done = false;
 
-                SysLib.cout( " read is called \n" );
                 while(sizeLeft > 0 && fsize(fd) > fd.seekPtr)
                 {
-                    SysLib.cout( "sizeLeft: " + sizeLeft + "\n");
                     int targetBlockID = fd.seekPtr;
                     short targetBlock = fd.inode.findTargetBlock(targetBlockID);
-
-                    SysLib.cout( "targetBlockID: " + targetBlockID + "\n");
-                    SysLib.cout( "targetBlock: " + targetBlock + "\n");
 
                     if (targetBlock == (short) -1)
                     {
@@ -139,10 +134,6 @@ public class FileSystem
                     int fileLeft = fd.inode.length - fd.seekPtr;
                     int offset = fd.seekPtr % Disk.blockSize;
 
-                    SysLib.cout( "offset: " + offset + "\n");
-                    SysLib.cout( "diskLeft: " + diskLeft + "\n");
-                    SysLib.cout( "fileLeft: " + fileLeft + "\n");
-
                     reading = (diskLeft < fileLeft) ? diskLeft : fileLeft;
 
                     if (reading > sizeLeft)
@@ -150,15 +141,12 @@ public class FileSystem
                         reading = sizeLeft;
                     }
 
-                    SysLib.cout( "reading: " + reading + "\n");
-
                     System.arraycopy(data, offset, buffer, havingRead, reading);
 
                     havingRead += reading;
                     sizeLeft -=  reading;
                     fd.seekPtr += reading;
                 }
-
                 return havingRead;
             }
         }
@@ -292,9 +280,7 @@ public class FileSystem
             fd.seekPtr = this.fsize(fd);
         }
         
-        // update seek pointer
-        
-        return fd.seekPtr; // it needs to be modified later
+        return fd.seekPtr;
     }
     
     /**
@@ -346,21 +332,9 @@ public class FileSystem
      */
     public synchronized int fsize(FileTableEntry fd)
     {
-        
         return fd.inode.length;
     }
-    
-    // do later
-    public void sync()
-    {
-        FileTableEntry fte = this.open("/", "w");
-        byte[] dirData = directory.directory2bytes();
-        write(fte, dirData);
-        close(fte);
-        superblock.sync();
-    }
-    
-    // do later
+
     private boolean deallocAllBlocks(FileTableEntry ftEnt)
     {
         if(ftEnt.inode.count != 1){

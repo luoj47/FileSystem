@@ -32,7 +32,7 @@ public class Directory
      * This method initializes the Directory instance with this data[]
      *
      * @param data the data[] received directory information from disk
-     * @return                                                  // It needs to be added later
+     * @return
      * edited by Midori on 7/23/16
      * code added from slides
      */
@@ -48,7 +48,7 @@ public class Directory
             String fname = new String(data, offset, maxChars * 2);
             fname.getChars(0, fsize[i], fnames[i], 0);
         }
-        return 0;  // Find out what needs to be returned!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        return 0;
     }
 
     /**
@@ -59,7 +59,7 @@ public class Directory
      */
     public byte[] directory2bytes()
     {
-        byte data[] = new byte[(fsize.length * maxChars * 2)];  // I'm not sure if this is the right size
+        byte data[] = new byte[(fsize.length * maxChars * 2)];
 
         int offset = 0;
 
@@ -85,7 +85,6 @@ public class Directory
      */
     public short ialloc(String filename)
     {
-        // finds an empty spot and adds new filename and length
         for (int i = 0; i < fsize.length; i++)
         {
             if(fsize[i] == 0)
@@ -99,7 +98,6 @@ public class Directory
                     fsize[i] = filename.length();
                 }
 
-                // Modify it later
                 filename.getChars(0, fsize[i], fnames[i], 0);
                 return (short) i;
             }

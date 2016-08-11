@@ -196,8 +196,6 @@ case INTERRUPT_SOFTWARE: // System calls
                   }
                   if ( ( myTcb = scheduler.getMyTcb( ) ) != null ) {
                      FileTableEntry ftEnt = myTcb.getFtEnt( param );
-
-                      SysLib.cerr("WRITE is called" + "\n");
                      if ( ftEnt != null )
                         return fs.write( ftEnt, ( byte[] )args );
                   }
@@ -215,40 +213,16 @@ case INTERRUPT_SOFTWARE: // System calls
     case OPEN:    // to be implemented in project
                   if ( ( myTcb = scheduler.getMyTcb( ) ) != null ) {
                      String[] s = ( String[] )args;
-
-                      // debugging
-                      SysLib.cerr("Kernel open\n");
-                      SysLib.cerr("first argument is : " + s[0] + "\n");
-                      SysLib.cerr("seconde argument is : " + s[1] + "\n");
-
                      return myTcb.getFd( fs.open( s[0], s[1] ) );
                   } else
                      return ERROR;
     case CLOSE:   // to be implemented in project
                   if ( ( myTcb = scheduler.getMyTcb( ) ) != null ) {
-
-                      // debugging
-                      SysLib.cerr("Kernel close is called\n");
-
                      FileTableEntry ftEnt = myTcb.getFtEnt( param );
-                      SysLib.cerr("getFtEnt is called\n");
-
-                      if (ftEnt == null)
-                      {
-                          SysLib.cerr("I am statement\n");
-                      }
-
                      if ( ftEnt == null || fs.close( ftEnt ) == false )
-                     {
-                         // debugging
-                         SysLib.cerr("first if statement\n");
-                         return ERROR;
-                     }
+                        return ERROR;
                      if ( myTcb.returnFd( param ) != ftEnt )
-                     {
-                         SysLib.cerr("second if statement\n");
-                         return ERROR;
-                     }
+                        return ERROR;
     return OK;
                   }
                   return ERROR;

@@ -68,7 +68,6 @@ class Test5 extends Thread {
     int totalBlocks = SysLib.bytes2int( superblock, 0 );
     int inodeBlocks = SysLib.bytes2int( superblock, 4 );
     int freeList = SysLib.bytes2int( superblock, 8 );
-
     if ( totalBlocks != 1000 ) {
       SysLib.cout( "totalBlocks = " + totalBlocks + " (wrong)\n" );
       return false;
