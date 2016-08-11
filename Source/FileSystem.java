@@ -1,5 +1,3 @@
-import java.io.File;
-
 /**
  * Created by Ko Fukushima and Jesse Luo on 7/9/2016.
  *

@@ -11,7 +11,7 @@ public class Superblock
     public int totalBlocks; // the number of disk blocks
     public int totalInodes; // the number of inodes
     public int freeList;    // the block number of the free List's head
-    
+
     /**
      * Class constructor that initializes the fields that are tatalBlocks,
      * totalInodes, and freeList
@@ -20,7 +20,7 @@ public class Superblock
      */
     public Superblock(int diskSize)
     {
-        byte[] superBlock = new byte[diskSize];
+        byte[] superBlock = new byte[Disk.blockSize];
         SysLib.rawread(0, superBlock); // starts from disk0
 
         // Convert the data in the disk to integer
@@ -39,29 +39,15 @@ public class Superblock
             format(defaultInodeBlocks);
         }
     }
-    
+
+    /**
+     * This sync writes the data back
+     * to the disk
+     */
     public void sync()
-    {
-        byte superblock[] = new byte[Disk.blockSize];
-
-        SysLib.int2bytes(totalBlocks, superblock, 0);
-        SysLib.int2bytes(totalInodes, superblock, 4);
-        SysLib.int2bytes(freeList, superblock, 8);
-
-        SysLib.rawwrite(0, superblock);
-    }
-    
-    public void format(int numFiles)
     {
         // create superblocks
         byte[] superBlock = new byte[Disk.blockSize];
-
-        // set the total Inodes
-        totalInodes = numFiles;
-
-        // get the starting block for the free list and set
-        // the offset
-        freeList = (totalInodes % 16 == 0) ? (totalInodes / 16 + 1) : (totalInodes / 16 + 2);
 
         // Convert the data in the disk to integer
         SysLib.int2bytes(totalBlocks, superBlock, 0); // offset 0
@@ -69,14 +55,39 @@ public class Superblock
         SysLib.int2bytes(freeList, superBlock, 8); // offset 8
 
         SysLib.rawwrite(0, superBlock);
+    }
+
+    /**
+     * This formats the files
+     *
+     * @param numFiles
+     */
+    public void format(int numFiles)
+    {
+        // set the total Inodes
+        totalInodes = numFiles;
+
+        // get the starting block for the free list and set
+        // the offset
+        freeList = (totalInodes % 16 == 0) ? (totalInodes / 16 + 1) : (totalInodes / 16 + 2);
 
         // create Inodes
-//        for (int i = 0; i < numFiles; i++)
-//        {
-//            Inode inode = new Inode();
-//            inode.flag = 0;
-//            inode.toDisk((short)i);
-//        }
+        for (int i = 0; i < numFiles; i++)
+        {
+            Inode inode = new Inode();
+            inode.flag = 0;
+            inode.toDisk((short)i);
+        }
+
+        // create superblocks
+        byte[] superBlock = new byte[Disk.blockSize];
+
+        // Convert the data in the disk to integer
+        SysLib.int2bytes(totalBlocks, superBlock, 0); // offset 0
+        SysLib.int2bytes(totalInodes, superBlock, 4); // offset 4
+        SysLib.int2bytes(freeList, superBlock, 8); // offset 8
+
+        SysLib.rawwrite(0, superBlock);
 
         for (int i = freeList; i < totalBlocks; i++)
         {
@@ -86,31 +97,52 @@ public class Superblock
         }
     }
 
-
     /**
+     * This gets the free list
      *
-     * @return next free (top) block from the free list (free queue). Returned as block number
-     * (int).
+     * @return freeList when totalBlocks > freeList && freeList > 0
+     * and -1 otherwise
      */
     public int getFreeBlock()
     {
-        if(freeList < totalBlocks && freeList > 0)
+        if (totalBlocks > freeList && freeList > 0)
         {
+            // this is to return the free list
+            int freeList = this.freeList;
+
             byte[] data = new byte[Disk.blockSize];
             SysLib.rawread(freeList, data);
 
-            int blockNumber = freeList;
+            // set the next free list
+            this.freeList = SysLib.bytes2int(data, 0);
 
-            freeList = SysLib.bytes2int(data, 0);
-
-            return blockNumber;
+            return freeList;
         }
 
         return -1;
     }
-    
+
+    /**
+     * This method  adds
+     * back to the freelist.
+     *
+     * @param oldBlockNumber
+     * @return True if success false otherwise
+     */
     public boolean returnBlock(int oldBlockNumber)
     {
+
+        if (oldBlockNumber > totalBlocks && oldBlockNumber > 0)
+        {
+            byte[] data = new byte[Disk.blockSize];
+
+            SysLib.int2bytes(freeList, data, 0);
+            SysLib.rawwrite(oldBlockNumber, data);
+
+            freeList = oldBlockNumber;
+            return true;
+        }
+
         return false;
     }
 }
