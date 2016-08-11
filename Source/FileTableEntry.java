@@ -31,5 +31,4 @@ public class FileTableEntry
             seekPtr = this.inode.length;
         }
     }
-    
 }

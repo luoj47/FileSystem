@@ -12,7 +12,7 @@ public class FileTable
 {
     private Vector table;
     private Directory dir;
-    
+
     /**
      * Class constructor that initializes the fields of table
      * and dir.
@@ -24,7 +24,7 @@ public class FileTable
         table = new Vector();
         dir = directory;
     }
-    
+
     /**
      * This method allocates a new file table entry for this file name
      * and it also allocate/retrive and register the corresoponding inode
@@ -35,11 +35,87 @@ public class FileTable
      * @param mode the mode such as "r", "w", "w+", or "a"
      * @return a reference to the file table entry
      */
+    // iNode.flag: 0 = unused, 1 = used, 2 = read, 3 = write, 4 = delete
+    /*
+        falloc method by Lu Ming Hsuan 8/1/2016
+        Jesse: made a few modifications since it didn't work
+        This method allocates a new file table entry for the filename provided
+        by assigning or retrieving and logging the correct iNode using dir
+        and increments iNode's count
+        The updated iNode will be written back to disk after
+        and a reference to the file table entry is returned
+     */
     public synchronized FileTableEntry falloc(String filename, String mode)
     {
-        return null; // needs to be coded
+        short iNumber = -1;
+        Inode iNode = null;
+        FileTableEntry fte = null;
+
+        //if mode is invalid, null request
+        // if(!(m.equals("r") || m.equals("w") || m.equals("w+") || m.equals("a")) )
+        if(!(mode.equals("r") || mode.equals("w") || mode.equals("w+") || mode.equals("a")) )
+        {
+            return fte;
+        }
+        else
+        {
+            while (true)
+            {
+                iNumber = filename.equals("/") ? (short) 0 : dir.namei(filename);
+                if (!mode.equals("r")) // create new
+                {
+                    iNumber = dir.ialloc(filename);
+                    iNode = new Inode(iNumber);
+                    iNode.flag = 3;
+                    break;
+                }
+                else if (iNumber >= 0)
+                {
+                    iNode = new Inode(iNumber);
+                    if ((mode.equals("r")) && (iNode.flag == 0 // unused, used or read
+                            || iNode.flag == 1
+                            || iNode.flag == 2))
+                    {
+                        iNode.flag = 2;
+                        break;
+                    }
+                    else if ((mode.equals("r")) && (iNode.flag == 3))
+                    {
+                        try
+                        {
+                            wait();
+                        }
+                        catch (InterruptedException e)
+                        {
+                        }
+                    }
+                    else if(iNode.flag == 0 // unused, used or write
+                            || iNode.flag == 1
+                            || iNode.flag == 3)
+                    {
+                       break;
+                    }
+                    else
+                    {
+                        try
+                        {
+                            wait();
+                        }
+                        catch(InterruptedException e)
+                        {
+                        }
+                    }
+                }
+            }
+        }
+
+        iNode.count++;//increment iNode count
+        iNode.toDisk(iNumber);//write iNode back to disk
+        fte = new FileTableEntry(iNode,iNumber, mode);//create new FileTableEntry for filename
+        table.add(fte);//add FTE to table
+        return fte;//return FTE reference
     }
-    
+
     /**
      * This method receive a file table entry reference
      * and save the corresponding inode to the disk
@@ -52,16 +128,17 @@ public class FileTable
      */
     public synchronized boolean ffree(FileTableEntry e)
     {
+
         boolean value = table.remove(e);
         if (value ==  true)
         {
             e.inode.flag=0;
-            
+
             if(e.inode.count != 0)
                 e.inode.count--;
             SysLib.cerr(" " + e.inode.count);
             e.inode.toDisk(e.iNumber); //save to disk
-            
+
             //write to direct
             e = null;
             return true;
@@ -72,7 +149,7 @@ public class FileTable
             return false;
         }
     }
-    
+
     /**
      * This method clear all file table entry in the table
      * and it should be called before starting a format

@@ -12,12 +12,12 @@ public class FileSystem
     private final int SEEK_SET = 0;
     private final int SEEK_CUR = 1;
     private final int SEEK_END = 2;
-
+    
     private Superblock superblock;
     private Directory directory;
     private FileTable filetable;
     private TCB tcb;
-
+    
     /**
      * Constructs a new FileSystem.
      *
@@ -29,24 +29,25 @@ public class FileSystem
         superblock = new Superblock (diskBlocks);
         
         directory = new Directory(superblock.totalInodes);
-
+        
         // create new directory, register "/" in directory entry 0
         filetable = new FileTable(directory);
-
+        
         // reconstruct the directory
         FileTableEntry dirEnt = open("/", "r");
         int dirSize = fsize(dirEnt);
-        if(dirSize > 0)
-        {
-            byte[] dirData = new byte[dirSize];
-            read(dirEnt, dirData);
-            directory.bytes2directory(dirData);
-        }
-        close(dirEnt);
+//        if(dirSize > 0)
+//        {
+//            byte[] dirData = new byte[dirSize];
+//            read(dirEnt, dirData);
+//            directory.bytes2directory(dirData);
+//        }
+//
+//        close(dirEnt);
     }
-
+    
     // the description of sync will be added more info later
-
+    
     /**
      * This method formats the disk
      *
@@ -60,13 +61,16 @@ public class FileSystem
         // allocate "files" inodes
         // returns if format successful
         
+        // directory = new Directory(superblock.totalInodes);
+
+        superblock.format(files);
         directory = new Directory(superblock.totalInodes);
         filetable = new FileTable(directory);
         return true; // it needs to be modified later
     }
-
+    
     // the description of open will be added more info later
-
+    
     /**
      * This method opens the file corresponding to the file
      * name in the given mode.
@@ -78,15 +82,25 @@ public class FileSystem
      */
     public FileTableEntry open(String fileName, String mode)
     {
+        // Debugging
+        SysLib.cerr("\nOpen method is called\n");
+        SysLib.cerr("My file name is :" + fileName + "\n");
+        SysLib.cerr("My mode is : " + mode + "\n");
+
         FileTableEntry newfte = filetable.falloc(fileName, mode);
 
         if (mode == "w")
+        {
             if (deallocAllBlocks(newfte))
+            {
                 return null;
+            }
+        }
 
+        SysLib.cerr("\n" + "open is done \n");
         return newfte; // when there is no spot in the table
     }
-
+    
     /**
      * This method reads as many bytes as possible
      * or up to buffer.length the file
@@ -98,26 +112,79 @@ public class FileSystem
      */
     public int read(FileTableEntry fd, byte[] buffer)
     {
-        // read byte[] buffer from tcb.ftEnt[fd]
-        // return number of bytes read
-        return 0; // it needs to be modified later
+        return 0;
     }
-
+    
     /**
-     * This method writes the contents of the buffer to the
+     * Write contents of buffer to the
      * file corresponding to the file descriptor.
      *
      * @param fd the file descriptor
      * @param buffer the buffer
      * @return
      */
-    public int write(FileTableEntry fd,  byte[] buffer)
+    public synchronized int write(FileTableEntry fd,  byte[] buffer)
     {
-        // write byte[] buffer to tcb.ftEnt[fd]
-        // return number of bytes written
-        return 0; // it needs to be modified later
-    }
+        int targetBlockID = fd.seekPtr;
+        int bytes = 0;
+        int bufferLength = buffer.length;
 
+        if((fd.mode != "r") && (fd != null))
+        {
+            while (bufferLength > 0)
+            {
+                short targetBlock = fd.inode.findTargetBlock(targetBlockID);
+                if (targetBlock == -1)
+                {
+                    targetBlock = (short) superblock.getFreeBlock();
+                    if((fd.inode.getBlockNumber(targetBlockID, targetBlock)) == -1)
+                    {
+                        return -1;
+                    }
+                    else if ((fd.inode.getBlockNumber(targetBlockID, targetBlock)) == -2)
+                    {
+                        short freeBlock = (short) this.superblock.getFreeBlock();
+                        if ((!fd.inode.setBlockNumber(freeBlock))
+                                || (fd.inode.getBlockNumber(targetBlockID, targetBlock) != 0))
+                        {
+                            return -1;
+                        }
+                    }
+                }
+                byte[] data = new byte[Disk.blockSize];
+                SysLib.rawread(targetBlock, data);
+                int temp = (512 - (targetBlockID % Disk.blockSize));
+                if (bufferLength < temp)
+                {
+                    System.arraycopy(buffer, bytes, data, (targetBlockID % Disk.blockSize), bufferLength);
+                    SysLib.rawwrite(targetBlock, data);
+                    fd.seekPtr += bufferLength;
+                    bytes += bufferLength;
+                    bufferLength = 0;
+                }
+                else
+                {
+                    System.arraycopy(buffer, bytes, data, (targetBlockID % 512), temp);
+                    SysLib.rawwrite(targetBlock, data);
+
+                    fd.seekPtr += temp;
+                    bytes += temp;
+                    bufferLength -= temp;
+                }
+            }
+            if (fd.seekPtr > fd.inode.length)
+            {
+                fd.inode.length = fd.seekPtr;
+            }
+            fd.inode.toDisk(fd.iNumber);
+            return bytes;
+        }
+        else
+        {
+            return -1;
+        }
+    }
+    
     /**
      * This method updates the seek pointer corresponding to
      * the file descriptor.
@@ -171,7 +238,7 @@ public class FileSystem
         
         return fd.seekPtr; // it needs to be modified later
     }
-
+    
     /**
      * This method close the file corresponding to
      * the file descriptor
@@ -181,16 +248,14 @@ public class FileSystem
      */
     public boolean close(FileTableEntry fd)
     {
-        int index;
-        if ((index = tcb.getFd(fd)) != -1)
+        if (fd != null && filetable.ffree(fd))
         {
-            tcb.ftEnt[index] = null;
             return true;
         }
-
+        
         return false; // when there is no corresponding file table entry
     }
-
+    
     /**
      * This method deletes the file that
      * is specified by file name only when the
@@ -203,16 +268,16 @@ public class FileSystem
     {
         // if (file == open){ mark for deletion (also can't receive new open request}
         // else { delete file}
-
+        
         short iNumber = directory.namei(fileName); // get the iNumber
         if(directory.ifree(iNumber)) // free the iNode and file
         {
             return true;
         }
-
+        
         return false;
     }
-
+    
     /**
      * This method returns the size in bytes
      * of the file indicated by file descriptor
@@ -223,13 +288,20 @@ public class FileSystem
      */
     public synchronized int fsize(FileTableEntry fd)
     {
+        // Debugging
+        SysLib.cerr("\nfsize method is called\n");
+
         return fd.inode.length;
     }
-
+    
     // do later
     public void sync()
     {
-
+        FileTableEntry fte = this.open("/", "w");
+        byte[] dirData = directory.directory2bytes();
+        write(fte, dirData);
+        close(fte);
+        superblock.sync();
     }
     
     // do later

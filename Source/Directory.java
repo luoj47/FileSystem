@@ -51,15 +51,15 @@ public class Directory
         return 0;  // Find out what needs to be returned!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     }
 
-        /**
-         * This method converts and return Directory information into a plain
-         * byte array that will be wrritten back to disk.
-         *
-         * @return the meaningfull Directory information
-         */
+    /**
+     * This method converts and return Directory information into a plain
+     * byte array that will be wrritten back to disk.
+     *
+     * @return the meaningfull Directory information
+     */
     public byte[] directory2bytes()
     {
-        byte data[] = new byte[fsize.length + fnames.length];  // I'm not sure if this is the right size
+        byte data[] = new byte[(fsize.length * 4) + (fnames.length * maxChars * 2)];  // I'm not sure if this is the right size
         int offset = 0;
 
         for ( int i = 0; i < fsize.length; i++, offset += 4 )
@@ -67,7 +67,7 @@ public class Directory
 
         for ( int i = 0; i < fnames.length; i++, offset += maxChars * 2 )
         {
-            String fname = new String(fnames[i]);
+            String fname = new String(fnames[i], 0, fsize[i]);
             byte[] temp = fname.getBytes();
             System.arraycopy(temp, 0, data, offset, temp.length);
         }
@@ -91,6 +91,7 @@ public class Directory
             {
                 fsize[i] = filename.length();
                 fnames[i] = filename.toCharArray();
+                return (short) i;
             }
         }
 
@@ -108,8 +109,12 @@ public class Directory
      */
     public boolean ifree(short iNumber)
     {
+        if(fsize[iNumber] < 0){
+            return false;
+        }
 
-        return false; // It needs to be modified later
+        fsize[iNumber] = 0;
+        return true; // It needs to be modified later
     }
 
     /**
@@ -120,6 +125,14 @@ public class Directory
      */
     public short namei(String filename)
     {
-        return 0; // It needs to be modified later
+        String fname;
+
+        for(int i = 0; i < fsize.length; i++){
+            fname = new String(fnames[i], 0, fsize[i]);
+            if(filename.compareTo(fname) == 0){
+                return (short) i;
+            }
+        }
+        return -1; // not found
     }
 }
