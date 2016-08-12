@@ -1,8 +1,13 @@
 /**
- * Created by Ko Fukushima and Jesse Luo on 7/9/2016.
+ * Created by Ko Fukushima, Lu Ming Hsuan, Jesse Luo
+ * CSS 430 A
+ * Professor Mike Panitz
+ * 11 August 2016
+ * Final Project, FileSystem: Inode.java
  *
- * This class describes a file, and this inode is a
- * Simplified version of the UnixInode
+ * This class represents an inode and described a file. Inode holds the file length,
+ * the number of pointers to the inode from file table entries, a flag to indicate
+ * unused, used, read, and write, and 11 direct pointers and 1 indirect pointer.
  */
 public class Inode
 {
@@ -16,10 +21,10 @@ public class Inode
     public short indirect;                          // a indirect pointer
 
     /**
-     * Class constructor that initializes the fields that are length,
+     * Constructs an inode that initializes the fields length,
      * count, flag, direct, and indirect.
      */
-    Inode()
+    public Inode()
     {
         length = 0;
         count = 0;
@@ -32,18 +37,15 @@ public class Inode
     }
 
     /**
-     * This method retrieves the inode from disk
+     * Constructs an Inode with the given iNumber.
      *
      * @param iNumber
-     * * edited by Midori on 7/23/16
-     * fixed some typos so it compiles 7/25/16
-     * added function code from slides
      */
-    Inode(short iNumber)
+    public Inode(short iNumber)
     {
         //retrieves existing inode from disk to memory
         //reads disk block, and locates the iNumber information in that block
-        // Initialize a new inode with that info
+        //Initialize a new inode with that info
         int blockNumber = 1 + iNumber / 16;
         byte[] data = new byte[Disk.blockSize];
         SysLib.rawread( blockNumber, data );
@@ -67,16 +69,15 @@ public class Inode
     }
 
     /**
-     * This method saves to disk as the i-th inode
+     * Write inode contents to the disk.
      *
      * @param iNumber
      * @return
      * edited by Midori on 7/23/16
      * added function code from slides
      */
-    int toDisk(short iNumber)
+    public int toDisk(short iNumber)
     {
-        //Save to disk as the i-th inode
         int blockNumber = 1 + iNumber / 16;
 
         //set the block number, divisible by 16. Add 1 to keep out of superblock
@@ -119,12 +120,16 @@ public class Inode
         return 0;
     }
 
-
-// find target block
     /**
+     * Finds the target block if it is within the range of the
+     * 11 direct pointers. Returns a -1, error, if indirect is less than 0.
+     * Otherwise, a byte[] is returned which is the result of the
+     * ((offset / Disk.blockSize) - directSize) * 2
      *
      * @param offset
-     * @return
+     * @return Returns target block if within direct pointer range.
+     * Returns -1 error if indirect is less than 0.
+     * Returns byte[] otherwise.
      */
     public short findTargetBlock(int offset)
     {
@@ -144,19 +149,23 @@ public class Inode
         return SysLib.bytes2short(data, (((offset / Disk.blockSize) - directSize) * 2));
     }
 
-    /** get Block Number
+    /** Returns block number by going through the direct
+     * and indirect pointers. If the pointer returns valid
+     * data, 0 (success is returned).
      *
      * @param seek
      * @param offset
-     * @return
+     * @return 0 if successful. -1 if the attempt to write
+     * to used or unused block was made
+     * -2 if attempt ro write to null pointer was made.
      */
-    int getBlockNumber(int seek, short offset)
+    public int getBlockNumber(int seek, short offset)
     {
         if ((seek / Disk.blockSize) < directSize)
         {
             if(((direct[(seek / Disk.blockSize)] >= 0))
                 || (((seek / Disk.blockSize) > 0 )
-                &&(direct[(seek / Disk.blockSize) - 1 ] == -1)))
+                && (direct[(seek / Disk.blockSize) - 1 ] == -1)))
             {
                 return -1;
             }
@@ -188,12 +197,14 @@ public class Inode
         return 0;
     }
 
-    /** set block number
+    /** Sets the indirect to point to the passed in
+     * newIndirect and writes the data.
      *
      * @param newIndirect
-     * @return
+     * @return True if successful, false if indirect is
+     * not -1 or if any direct pointers are -1.
      */
-    boolean setBlockNumber(short newIndirect)
+    public boolean setBlockNumber(short newIndirect)
     {
         if (indirect != -1)
         {
@@ -222,6 +233,10 @@ public class Inode
         return true;
     }
 
+    /**
+     * Returns the directSize
+     * @return directSize
+     */
     public static int getDirectSize(){
         return directSize;
     }

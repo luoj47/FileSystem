@@ -1,5 +1,9 @@
 /**
- * Created by Ko Fukushima and Jesse Luo on 7/9/2016.
+ * Created by Ko Fukushima, Lu Ming Hsuan, Jesse Luo
+ * CSS 430 A
+ * Professor Mike Panitz
+ * 11 August 2016
+ * Final Project, FileSystem: Directory.java
  *
  * This class maintains each file in a different directory entry that
  * contains its file name and the corresponding inode number.
@@ -8,11 +12,11 @@
 public class Directory
 {
     private static int maxChars = 30;   // max characters of each file name
-
+    
     // Directory entries
     private int fsize[];
     private char fnames[][];
-
+    
     /**
      * Class constructor that initializes the fields that are fsize,
      * fnames, root, fsize.
@@ -27,7 +31,7 @@ public class Directory
         fsize[0] = root.length();
         root.getChars(0, fsize[0], fnames[0], 0);
     }
-
+    
     /**
      * This method initializes the Directory instance with this data[]
      *
@@ -38,11 +42,15 @@ public class Directory
      */
     public int bytes2directory(byte data[])
     {
-        int offset = 0; //needed for SysLib call
-
+        int offset = 0;
+        
+        // converts the four bytes of data into an file size of
+        // integer
         for ( int i = 0; i < fsize.length; i++, offset += 4 )
             fsize[ i ] = SysLib.bytes2int( data, offset );
-
+        
+        // copy the characters from the fname into the
+        // fnames array
         for ( int i = 0; i < fnames.length; i++, offset += maxChars * 2 )
         {
             String fname = new String(data, offset, maxChars * 2);
@@ -50,7 +58,7 @@ public class Directory
         }
         return 0;
     }
-
+    
     /**
      * This method converts and return Directory information into a plain
      * byte array that will be wrritten back to disk.
@@ -60,22 +68,25 @@ public class Directory
     public byte[] directory2bytes()
     {
         byte data[] = new byte[(fsize.length * maxChars * 2)];
-
+        
         int offset = 0;
-
+        
+        // convert the integer i into fsize.length, and
+        // then copied those four bytes into data
         for ( int i = 0; i < fsize.length; i++, offset += 4 )
             SysLib.int2bytes( fsize[i], data, offset );
-
+        
         for ( int i = 0; i < fnames.length; i++, offset += maxChars * 2 )
         {
+            // copy the fname into the data
             String fname = new String(fnames[i], 0, fsize[i]);
             byte[] temp = fname.getBytes();
             System.arraycopy(temp, 0, data, offset, temp.length);
         }
-
+        
         return data;
     }
-
+    
     /**
      * This methods creates the one of a file, and
      * allocates a new inode number for it.
@@ -85,10 +96,13 @@ public class Directory
      */
     public short ialloc(String filename)
     {
+        // finds an empty spot and adds new filename and length
         for (int i = 0; i < fsize.length; i++)
         {
             if(fsize[i] == 0)
             {
+                // make sure if the length is
+                // within maxChars
                 if (filename.length() > maxChars)
                 {
                     fsize[i] = maxChars;
@@ -97,15 +111,15 @@ public class Directory
                 {
                     fsize[i] = filename.length();
                 }
-
+                
                 filename.getChars(0, fsize[i], fnames[i], 0);
                 return (short) i;
             }
         }
-
+        
         return -1;
     }
-
+    
     /**
      * This method deallocate this inumber (inode number) and
      * also deallocate the corresponding file
@@ -120,11 +134,11 @@ public class Directory
         {
             return false;
         }
-
+        
         fsize[iNumber] = 0;
         return true;
     }
-
+    
     /**
      * This method returns the inumber corresoponding to this filename
      *
@@ -134,7 +148,7 @@ public class Directory
     public short namei(String filename)
     {
         String fname;
-
+        
         for(int i = 0; i < fsize.length; i++)
         {
             fname = new String(fnames[i], 0, fsize[i]);

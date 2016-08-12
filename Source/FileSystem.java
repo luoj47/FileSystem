@@ -1,8 +1,14 @@
 /**
- * Created by Ko Fukushima and Jesse Luo on 7/9/2016.
+ * Created by Ko Fukushima, Lu Ming Hsuan, Jesse Luo
+ * CSS 430 A
+ * Professor Mike Panitz
+ * 11 August 2016
+ * Final Project, FileSystem: FileSystem.java
  *
- * This class manages the structure of a FileSystem by holding
- * the superblock, directory, and filetable.
+ * This class manages the structure of a FileSystem by holding the Superblock
+ * Directory, and Filetable, as well as performing all the disk operations.
+ * FileSystem acts as the interface in which a user may interact with to access
+ * the functions of our FileSystem.
  *
  */
 public class FileSystem
@@ -17,7 +23,8 @@ public class FileSystem
     private TCB tcb;
     
     /**
-     * Constructs a new FileSystem.
+     * Constructs a new FileSystem and initializes superblock,
+     * directory, and filetable.
      *
      * @param diskBlocks size of the superblock
      */
@@ -44,9 +51,13 @@ public class FileSystem
         close(dirEnt);
     }
 
+    /**
+     * Syncs the superblock ands keeps the file system synced with the disk.
+     */
     public void sync()
     {
         FileTableEntry fte = this.open("/", "w");
+        // write directory information to disk
         byte[] dirData = directory.directory2bytes();
         write(fte, dirData);
         close(fte);
@@ -54,10 +65,13 @@ public class FileSystem
     }
     
     /**
-     * This method formats the disk
+     * This method formats the disk, erasing all data on the disk
+     * (superblock, filetable, directory). The parameter, files,
+     * the number of inodes to be created by the superblock after
+     * it has been formatted.
      *
      * @param files the # files to be created
-     * @return 0 on success, -1 otherwise
+     * @return 0 on success (always)
      */
     public boolean format(int files)
     {
@@ -69,19 +83,21 @@ public class FileSystem
         superblock.format(files);
         directory = new Directory(superblock.totalInodes);
         filetable = new FileTable(directory);
-        return true; // it needs to be modified later
+        return true;
     }
-    
-    // the description of open will be added more info later
     
     /**
      * This method opens the file corresponding to the file
-     * name in the given mode.
+     * name string in the given mode. A new FileTableEntry is
+     * created with the given filename and mode. If the mode for
+     * that FileTableEntry is write ("w"), then all blocks are
+     * deallocated and writing starts from the beginning. The
+     * FileTableEntry is returned after writing is successfull
+     * or if the mode was not write.
      *
      * @param fileName
      * @param mode
-     * @return int fd
-     * between 3 to 31
+     * @return FileTableEntry newfte
      */
     public FileTableEntry open(String fileName, String mode)
     {
@@ -100,7 +116,7 @@ public class FileSystem
     /**
      * This method reads as many bytes as possible
      * or up to buffer.length the file
-     * corresponding to the file descriptor
+     * corresponding to the file descriptor.
      *
      * @param fd the file descriptor
      * @param buffer the buffer
@@ -159,11 +175,14 @@ public class FileSystem
     
     /**
      * This method writes the contents of the buffer to the
-     * file corresponding to the file descriptor.
+     * file corresponding to the file descriptor. The write
+     * starts at the seek pointer, and increases the seekptr
+     * based on bytes, or the bytes written. The bytes written
+     * is returned at the end, or -1 if an error occured.
      *
      * @param fd the file descriptor
      * @param buffer the buffer
-     * @return
+     * @return bytes written (bytes)
      */
     public synchronized int write(FileTableEntry fd, byte[] buffer)
     {
@@ -171,26 +190,29 @@ public class FileSystem
         int bytes = 0;
         int bufferLength = buffer.length;
 
+        // Check if fd is not null and mode is correct.
         if (fd != null && fd.mode != "r")
         {
             while (bufferLength > 0)
             {
                 int targetBlock = fd.inode.findTargetBlock(fd.seekPtr);
-
+                // target block doesn't exist
                 if (targetBlock == -1)
                 {
                     targetBlock = superblock.getFreeBlock();
-
+                    // attempt to get a block for the target block
                     if ((fd.inode.getBlockNumber(fd.seekPtr, (short) targetBlock)) == -1)
                     {
                         return -1;
                     }
                     else if ((fd.inode.getBlockNumber(fd.seekPtr, (short) targetBlock)) == -2)
                     {
+                        // indirect < 0
                         if (!fd.inode.setBlockNumber((short) superblock.getFreeBlock()))
                         {
                             return -1;
                         }
+                        // check for block pointer error
                         if (fd.inode.getBlockNumber(fd.seekPtr, (short) targetBlock) != 0)
                         {
                             return -1;
@@ -202,6 +224,7 @@ public class FileSystem
                 int front = fd.seekPtr % Disk.blockSize;
                 int end = Disk.blockSize - front;
 
+                // update seek pointers
                 System.arraycopy(buffer, bytes, data, front, Math.min(bufferLength, end));
                 SysLib.rawwrite(targetBlock, data);
                 fd.seekPtr += Math.min(bufferLength, end);
@@ -335,28 +358,42 @@ public class FileSystem
         return fd.inode.length;
     }
 
+    /**
+     * deallocAllBlocks
+     * This method dellocates all blocks in inode by checking
+     * the count of the inode block, if it is not 1, it means it is null
+     * and therefore invalid. If count is 1 and valid
+     * it traverses all direct pointer blocks with loops. 
+     * Each block is check if valid and then returnBlock is
+     * invoked to wipe the block clean
+     * and the block will be set to invalid 
+     * Finally, inodes are written back to disk
+     * @param ftEnt
+     * @return Returns if all direct pointers blocks are valid.
+     */
     private boolean deallocAllBlocks(FileTableEntry ftEnt)
     {
-        if(ftEnt.inode.count != 1){
+        if(ftEnt.inode.count != 1){//checks count, if not 1, inode is empty
             SysLib.cerr("Null pointer, file table entry is empty");
-            return false;
+            return false;//invalid
         }
 
-        for(int bID = 0; bID < ftEnt.inode.getDirectSize(); bID++){
-            if(ftEnt.inode.direct[bID] != -1){
-                superblock.returnBlock(bID);
-                ftEnt.inode.direct[bID] = -1;
+        for(int bID = 0; bID < ftEnt.inode.getDirectSize(); bID++){//loops size of inode
+            if(ftEnt.inode.direct[bID] != -1){//if not -1, valid
+                superblock.returnBlock(bID);//return block
+                ftEnt.inode.direct[bID] = -1;//and reset direct block to invalid
             }
         }
 
-        byte[] data = new byte[Disk.blockSize];
+        byte[] data = new byte[Disk.blockSize];//create new byte[] data to store new block data
         SysLib.rawread(ftEnt.inode.indirect, data);
         ftEnt.inode.indirect = -1;
-
+        
+        //if data is not empty, write back to disk
         if(data != null){
             int bID;
-            while((bID = SysLib.bytes2short(data, 0)) != -1){
-                superblock.returnBlock(bID);
+            while((bID = SysLib.bytes2short(data, 0)) != -1){//block id valid
+                superblock.returnBlock(bID);//return block
             }
         }
         ftEnt.inode.toDisk(ftEnt.iNumber);

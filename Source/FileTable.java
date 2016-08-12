@@ -1,9 +1,12 @@
 /**
- *  Created by Ko Fukushima and Jesse Luo on 7/9/2016.
+ * Created by Ko Fukushima, Lu Ming Hsuan, Jesse Luo
+ * CSS 430 A
+ * Professor Mike Panitz
+ * 11 August 2016
+ * Final Project, FileSystem: FileTable.java
  *
  *  This class manages file entry table by allocating for,
- *  freeing, emptying the entry in the table
- *
+ *  freeing, emptying the entry the file table entry table.
  */
 
 import java.util.Vector;
@@ -14,7 +17,7 @@ public class FileTable
     private Directory dir;
 
     /**
-     * Class constructor that initializes the fields of table
+     * Constructs a FileTable that initializes the fields of table
      * and dir.
      *
      * @param directory the directory
@@ -26,24 +29,17 @@ public class FileTable
     }
 
     /**
-     * This method allocates a new file table entry for this file name
-     * and it also allocate/retrive and register the corresoponding inode
-     * using dir increment this inode's count immediately write back this
-     * inode this inode to the disk
+     * This method allocates a new file table entry for the filename provided
+     * by assigning or retrieving and logging the correct iNode using dir
+     * and increments iNode's count
+     * The updated iNode will be written back to disk after
+     * and a reference to the file table entry is returned
+     *
+     * iNode.flag: 0 = unused, 1 = used, 2 = read, 3 = write, 4 = delete
      *
      * @param filename the file name
      * @param mode the mode such as "r", "w", "w+", or "a"
      * @return a reference to the file table entry
-     */
-    // iNode.flag: 0 = unused, 1 = used, 2 = read, 3 = write, 4 = delete
-    /*
-     falloc method by Lu Ming Hsuan 8/1/2016
-     Jesse: made a few modifications since it didn't work
-     This method allocates a new file table entry for the filename provided
-     by assigning or retrieving and logging the correct iNode using dir
-     and increments iNode's count
-     The updated iNode will be written back to disk after
-     and a reference to the file table entry is returned
      */
     public synchronized FileTableEntry falloc(String filename, String mode)
     {
@@ -106,6 +102,8 @@ public class FileTable
                         catch(InterruptedException e){}
                     }
                 }
+                // if inode for file doesn't exist, create new inode with iNumber
+                // obtained from ialloc
                 else if (!mode.equals("r"))
                 {
                     iNumber = dir.ialloc(filename);
@@ -129,16 +127,16 @@ public class FileTable
 
     /**
      * This method receive a file table entry reference
-     * and save the corresponding inode to the disk
-     * and free this file table entry
+     * and removes that file table entry. All threads are
+     * woken up if the removed fte had writing status on the inode.
+     * Only 1 other thread is woken up otherwise.
      *
      * @param e the file table entry
-     * @return True if this file entry found in the table,
-     * false otherwise
-     * edited on 7/23/16 by Midori
+     * @return True if remove was successful, false if not
      */
     public synchronized boolean ffree(FileTableEntry e)
     {
+        // holder for inode since so we can remove fte
         Inode temp = new Inode(e.iNumber);
         boolean removed = table.remove(e);
         if (removed)
@@ -154,6 +152,7 @@ public class FileTable
                 temp.flag = 1;
             }
 
+            // if users exist, decrement users
             if(temp.count != 0)
                 temp.count--;
 
@@ -165,8 +164,7 @@ public class FileTable
     }
 
     /**
-     * This method clear all file table entry in the table
-     * and it should be called before starting a format
+     * Returns whether or not the file table of file table entries is empty
      *
      * @return True if table is empty and false otherwise
      */

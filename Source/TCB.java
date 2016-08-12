@@ -1,10 +1,15 @@
 /**
- * Created by Ko Fukushima and Jesse Luo on 7/9/2016.
+ * Created by Ko Fukushima, Lu Ming Hsuan, Jesse Luo
+ * CSS 430 A
+ * Professor Mike Panitz
+ * 11 August 2016
+ * Final Project, FileSystem: TCB.java
  *
  * This class represents a Thread control block that
  * manages up to 32 open files
  *
  */
+
 public class TCB
 {
     private Thread thread = null;
@@ -19,7 +24,7 @@ public class TCB
 
     /**
      *
-     * Class constructor that initializes the parameters: thread, tid, pid
+     * Constructs a TCB that initializes the parameters: thread, tid, pid
      * , terminated, and FileTableEntry
      *
      * @param thread a thread
@@ -38,7 +43,7 @@ public class TCB
     }
 
     /**
-     * This method returns the terminate
+     * Returns the terminate
      *
      * @return terminate the terminte
      */
@@ -47,6 +52,10 @@ public class TCB
         return terminate;
     }
 
+    /**
+     * Sets the terminate
+     * @return the terminate, set to true
+     */
     public synchronized boolean setTerminated()
     {
         return terminate = true;
@@ -61,8 +70,9 @@ public class TCB
     {
         return thread;
     }
+
     /**
-     * This method returns a thread id
+     * This method returns the thread id
      *
      * @return tid the id for a thread
      */
@@ -72,7 +82,7 @@ public class TCB
     }
 
     /**
-     * This method returns a process id
+     * This method returns the process id
      *
      * @return pid the id for a process
      */
@@ -83,11 +93,11 @@ public class TCB
 
     /**
      * This method returns a specified file table
-     * entry corresponding to the fd and fd shoul not
-     * be 0, 1, and 2 since their reseved by standard
+     * entry corresponding to the fd. The fd should not
+     * be 0, 1, and 2 since they're reserved by standard
      * input, output, and error.
      *
-     * @param fd the file discripter
+     * @param fd the file descriptor
      * @return fnEnt[fd] if the file entry exists
      * null if not
      */
@@ -102,8 +112,30 @@ public class TCB
     }
 
     /**
+     * This method returns a specified file table
+     * entry corresponding to the fd. The fd should not
+     * be 0, 1, and 2 since they're reserved by standard
+     * input, output, and error.
+     *
+     * @param fd the file descriptor
+     * @return fnEnt[fd] if the file entry exists
+     * null if not
+     */
+    public synchronized FileTableEntry returnFd(int fd)
+    {
+        if (fd >= 3 && fd < FILE_TABLE_ENTRY_SIZE)
+        {
+            FileTableEntry oldFtEtn = ftEnt[fd];
+            ftEnt[fd] = null;
+            return oldFtEtn;
+        }
+
+        return null;
+    }
+
+    /**
      * This method returns the file
-     * descriptor
+     * descriptor.
      *
      * @param ftEnt file table Entry
      * @return file descriptor -1 if not found
@@ -116,6 +148,7 @@ public class TCB
         // is not null
         if (ftEnt != null)
         {
+            // iterates through file table entries
             while (this.ftEnt[index++] != null && index < FILE_TABLE_ENTRY_SIZE) {}
         }
         else
@@ -131,27 +164,5 @@ public class TCB
         }
 
         return -1;
-    }
-
-    /**
-     * This method returns a specified file table
-     * entry corresponding to the fd and fd shoul not
-     * be 0, 1, and 2 since their reseved by standard
-     * input, output, and error.
-     *
-     * @param fd the file discripter
-     * @return fnEnt[fd] if the file entry exists
-     * null if not
-     */
-    public synchronized FileTableEntry returnFd(int fd)
-    {
-        if (fd >= 3 && fd < FILE_TABLE_ENTRY_SIZE)
-        {
-            FileTableEntry oldFtEtn = ftEnt[fd];
-            ftEnt[fd] = null;
-            return oldFtEtn;
-        }
-
-        return null;
     }
 }

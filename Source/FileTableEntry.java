@@ -1,5 +1,9 @@
 /**
- * Created by Ko Fukushima and Jesse Luo on 7/9/2016.
+ * Created by Ko Fukushima, Lu Ming Hsuan, Jesse Luo
+ * CSS 430 A
+ * Professor Mike Panitz
+ * 11 August 2016
+ * Final Project, FileSystem: FileTableEntry.java
  *
  * This class is shared among all user threads
  */
